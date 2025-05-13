@@ -11,9 +11,9 @@ import sys
 pygame.init()
 
 # Setting up screen dimensions
-WIDTH, HEIGHT = 1000, 400
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Car Ricers")
+WIDTH, HEIGHT = 1000, 500 # size of the screen (smaller)
+screen = pygame.display.set_mode((WIDTH, HEIGHT)) # screen dimensions
+pygame.display.set_caption("Car Ricers") # naming of program
 
 # Clock for controlling frame rate
 clock = pygame.time.Clock()
