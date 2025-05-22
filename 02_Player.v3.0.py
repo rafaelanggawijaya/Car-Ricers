@@ -1,6 +1,6 @@
-"""02_Player V2
+"""02_Player V3
 Description: making the player, design, controls, hitbox and animations
-Updates: Made a class for controls and player variables
+Updates: Added boudaries to stop car from leaving the screen
 By Rafael Anggawijaya 
 """
 import pygame
@@ -46,6 +46,8 @@ class Player:
         self.change_x = 0
         self.change_y = 0
 
+
+
     def movement(self, user_input):
         # Checks if key pressed
         if user_input[pygame.K_LEFT] or user_input[pygame.K_a]:
@@ -60,12 +62,22 @@ class Player:
         self.player_rect.x += self.change_x
         self.player_rect.y += self.change_y
 
+        # boundaries
+        if self.player_rect.x < 0:
+            self.player_rect.x = 0
+        if self.player_rect.y < 0:
+            self.player_rect.y = 0
+        if self.player_rect.x > screen.get_width() - player_width:
+            self.player_rect.x = screen.get_width() - player_width
+        if self.player_rect.y > screen.get_height() - player_length:
+            self.player_rect.y = screen.get_height() - player_length
+
     def draw(self, screen):
         screen.blit(self.player_image, (self.player_rect.x, self.player_rect.y))
 # Hitbox/placeholder car design
 player_hitbox = pygame.Surface((player_width, player_length))
 player_hitbox.fill(player_colour)
-player = Player(player_hitbox, 1, 5)
+player = Player(player_hitbox, 4, 5)
 
 
 
