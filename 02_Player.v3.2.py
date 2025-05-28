@@ -100,9 +100,21 @@ class Player:
         self.image = pygame.transform.rotate(self.original_image, -self.direction)
         self.rect = self.image.get_rect(center=self.pos)
         
-        # Keep car on screen
-        self.pos.x = max(0, min(WIDTH, self.pos.x))
-        self.pos.y = max(0, min(HEIGHT, self.pos.y))
+    # boudaries
+    def keep_on_screen(self):
+    # Get car's rotated rect
+        car_rect = self.image.get_rect(center=self.pos)
+        
+        # Adjust position if needed
+        if car_rect.left < 0:
+            self.pos.x -= car_rect.left
+        if car_rect.right > WIDTH:
+            self.pos.x -= (car_rect.right - WIDTH)
+        if car_rect.top < 0:
+            self.pos.y -= car_rect.top
+        if car_rect.bottom > HEIGHT:
+            self.pos.y -= (car_rect.bottom - HEIGHT)
+
 
     def draw(self, screen):
         screen.blit(self.image, self.rect)
@@ -122,6 +134,7 @@ while True:
     user_movement = pygame.key.get_pressed()
     player.movement(user_movement)
     player.draw(screen)
+    player.keep_on_screen()
 
     pygame.display.update()
     clock.tick(60)
