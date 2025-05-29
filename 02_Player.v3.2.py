@@ -30,18 +30,12 @@ PLAYER_COLOR = (40, 18, 150)
 
 class Player:
     def __init__(self, width, height, color):
-        # Create surface
+        # Create car surface with height > width (longer front/back)
         self.original_image = pygame.Surface((width, height), pygame.SRCALPHA)
-        
-        # Load and scale the car image
-        self.player_image = pygame.image.load("player_car.png").convert_alpha()
-        self.player_image = pygame.transform.scale(self.player_image, (width, height))
-        
-        # Draw car
-        self.original_image.blit(self.player_image, (0, 0))
-        
+        pygame.draw.rect(self.original_image, color, (0, 0, width, height))
+       
         # Hitbox
-        pygame.draw.rect(self.original_image, color, (0, 0, width, height), 2)
+        pygame.draw.rect(self.original_image, color, (0, 0, width, height))
         
         # Add yellow front indicator 
         pygame.draw.circle(self.original_image, (255, 255, 0), (width//2, 10), 5)

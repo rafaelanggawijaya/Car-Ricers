@@ -1,6 +1,8 @@
 """02_Player V3.1
 Description: making the player, design, controls, hitbox and animations
 Updates: Trialling different moving options (angle change for left and right movement)
+kept the car centered to the screen and can only turn 
+(This makes it so background and objects around the car move around relative to the player)
 By Rafael Anggawijaya 
 """
 
