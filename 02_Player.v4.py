@@ -33,17 +33,17 @@ class Player:
         # Create surface with original dimensions (width=50, height=80)
         self.original_image = pygame.Surface((width, height), pygame.SRCALPHA)
         
-        # Load and scale the car image to match EXACTLY the original box size
+        # Load and scale the car
         self.player_image = pygame.image.load("player_car.png").convert_alpha()
         self.player_image = pygame.transform.scale(self.player_image, (width, height))
         
-        # Draw the perfectly scaled car image
+        # Draw car
         self.original_image.blit(self.player_image, (0, 0))
         
-        # Draw hollow hitbox (same size as original)
+        # Hitbox
         pygame.draw.rect(self.original_image, color, (0, 0, width, height), 2)
         
-        # Add yellow front indicator (position matches original)
+        # Add yellow front indicator 
         pygame.draw.circle(self.original_image, (255, 255, 0), (width//2, 10), 5)
         
         # Position and movement variables
@@ -55,6 +55,8 @@ class Player:
         self.max_speed = 5
         self.deceleration = 0.1
         self.brake_strength = 0.3
+        self.drift_speed = 1  # downward mtion when not movinvg
+        self.max_drift_speed = 2  # Maximum drift speed
         
         # Rotate original image so top (yellow dot) faces right initially
         self.original_image = pygame.transform.rotate(self.original_image, -90)
@@ -77,15 +79,22 @@ class Player:
                 self.velocity.x -= brake_dir.x * self.brake_strength
                 self.velocity.y -= brake_dir.y * self.brake_strength
         
-        # Natural deceleration
-        if not (user_input[pygame.K_UP] or user_input[pygame.K_w] or 
-                user_input[pygame.K_DOWN] or user_input[pygame.K_s]):
+        # Check if no movement keys are pressed
+        no_movement_keys = not (user_input[pygame.K_UP] or user_input[pygame.K_w] or 
+                            user_input[pygame.K_DOWN] or user_input[pygame.K_s])
+        
+        # Natural deceleration when no keys pressed
+        if no_movement_keys:
             if self.velocity.length() > self.deceleration:
                 decel_dir = self.velocity.normalize()
                 self.velocity.x -= decel_dir.x * self.deceleration
                 self.velocity.y -= decel_dir.y * self.deceleration
             else:
                 self.velocity = pygame.math.Vector2()
+            
+            # Apply downward drift when completely stopped
+            if self.velocity.length() == 0:
+                self.velocity.y = min(self.velocity.y + self.drift_speed, self.max_drift_speed)
         
         # Limit speed
         if self.velocity.length() > self.max_speed:

@@ -44,7 +44,7 @@ class Background:
         self.width = WIDTH
         self.background = pygame.Surface((WIDTH, HEIGHT))
         
-        # Scrolling variables
+        # animations variables
         self.scroll_y = 0
         self.speed = 0
         self.max_speed = 10
@@ -138,25 +138,41 @@ class Background:
 
 class Player:
     def __init__(self, width, height, color):
+        # Create surface with original dimensions (width=50, height=80)
         self.original_image = pygame.Surface((width, height), pygame.SRCALPHA)
-        pygame.draw.rect(self.original_image, color, (0, 0, width, height))
+        
+        # Load and scale the car
+        self.player_image = pygame.image.load("player_car.png").convert_alpha()
+        self.player_image = pygame.transform.scale(self.player_image, (width, height))
+        
+        # Draw car
+        self.original_image.blit(self.player_image, (0, 0))
+        
+        # Hitbox
+        pygame.draw.rect(self.original_image, color, (0, 0, width, height), 2)
+        
+        # Add yellow front indicator 
         pygame.draw.circle(self.original_image, (255, 255, 0), (width//2, 10), 5)
         
         self.pos = pygame.math.Vector2(WIDTH // 2, HEIGHT // 2)
         self.velocity = pygame.math.Vector2()
         self.direction = 270  # Pointing up
         self.rotation_speed = 3
-        self.acceleration = 0.2
-        self.max_speed = 5
-        self.deceleration = 0.1
-        self.brake_strength = 0.3
+        self.acceleration = 0.1
+        self.max_speed = 2
+        self.deceleration = 0.4
+        self.brake_strength = 0.1
+        self.brake_hold_time = False
+        self.brake_cooldown = 2000  # 2000ms = 2 seconds
+        self.drift_speed = 1  # downward motion when not movinvg
+        self.max_drift_speed = 2  # Maximum drift speed
         
         self.original_image = pygame.transform.rotate(self.original_image, -90)
         self.image = self.original_image
         self.rect = self.image.get_rect(center=self.pos)
 
     def movement(self, user_input):
-        # Acceleration
+        # Acceleration foward
         if user_input[pygame.K_UP] or user_input[pygame.K_w]:
             rad = math.radians(self.direction)
             self.velocity.x += math.cos(rad) * self.acceleration
@@ -164,20 +180,37 @@ class Player:
         
         # Braking
         if user_input[pygame.K_DOWN] or user_input[pygame.K_s]:
-            if self.velocity.length() > 0:
+            if self.velocity.length() > 0 and self.brake_hold_time == False:
                 brake_dir = self.velocity.normalize()
                 self.velocity.x -= brake_dir.x * self.brake_strength
                 self.velocity.y -= brake_dir.y * self.brake_strength
+                # cheecks if velocity hits zero
+                if (brake_dir.x > 0 and self.velocity.x < 0) or (brake_dir.x < 0 and self.velocity.x > 0) or \
+                (brake_dir.y > 0 and self.velocity.y < 0) or (brake_dir.y < 0 and self.velocity.y > 0):
+                    self.velocity.x = 0
+                    self.velocity.y = 0
+                    pygame.time.delay(2000)
+                    self.brake_hold_time = True
+                
+            
         
-        # Natural deceleration
-        if not (user_input[pygame.K_UP] or user_input[pygame.K_w] or 
-                user_input[pygame.K_DOWN] or user_input[pygame.K_s]):
+        
+        # Check if no movement keys are pressed
+        no_movement_keys = not (user_input[pygame.K_UP] or user_input[pygame.K_w] or 
+                            user_input[pygame.K_DOWN] or user_input[pygame.K_s])
+        
+        # Natural deceleration when no keys pressed
+        if no_movement_keys or self.brake_hold_time:
             if self.velocity.length() > self.deceleration:
                 decel_dir = self.velocity.normalize()
                 self.velocity.x -= decel_dir.x * self.deceleration
                 self.velocity.y -= decel_dir.y * self.deceleration
             else:
                 self.velocity = pygame.math.Vector2()
+            
+            # Apply downward drift when completely stopped
+            if self.velocity.length() == 0:
+                self.velocity.y = min(self.velocity.y + self.drift_speed, self.max_drift_speed)
         
         # Speed limit
         if self.velocity.length() > self.max_speed:
@@ -195,7 +228,7 @@ class Player:
         self.pos += self.velocity
         self.image = pygame.transform.rotate(self.original_image, -self.direction)
         self.rect = self.image.get_rect(center=self.pos)
-        
+    
     def keep_on_screen(self):
         car_rect = self.image.get_rect(center=self.pos)
         if car_rect.left < 0:
