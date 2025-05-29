@@ -1,7 +1,6 @@
-"""02_Player V3.2
+"""02_Player V4
 Description: making the player, design, controls, hitbox and animations
-Updates: I wanted to do a combination of the last two to see if turning and 
-moving the car would be good (setting the background and other cars fixed)
+Updates: adding in game car image and matching hitbox for testing later
 By Rafael Anggawijaya 
 """
 
@@ -28,23 +27,27 @@ clock = pygame.time.Clock()
 WHITE = (255, 255, 255)
 PLAYER_COLOR = (40, 18, 150)
 
+
 class Player:
     def __init__(self, width, height, color):
-        # Create surface
-        self.original_image = pygame.Surface((width, height), pygame.SRCALPHA)
-        
-        # Load and scale the car image
+        # Load and scale the car image (note: CAR_LENGTH is height, CAR_WIDTH is width)
         self.player_image = pygame.image.load("player_car.png").convert_alpha()
-        self.player_image = pygame.transform.scale(self.player_image, (width, height))
+        self.player_image = pygame.transform.scale(self.player_image, (CAR_LENGTH, CAR_WIDTH))
         
-        # Draw car
-        self.original_image.blit(self.player_image, (0, 0))
+        # Create the original image surface (transparent background)
+        # Use CAR_LENGTH as height and CAR_WIDTH as width to match the image
+        self.original_image = pygame.Surface((CAR_LENGTH, CAR_WIDTH), pygame.SRCALPHA)
         
-        # Hitbox
-        pygame.draw.rect(self.original_image, color, (0, 0, width, height), 2)
+        # Center the image on the surface (since blit position is top-left)
+        image_x = (CAR_LENGTH - self.player_image.get_width()) // 2
+        image_y = (CAR_WIDTH - self.player_image.get_height()) // 2
+        self.original_image.blit(self.player_image, (image_x, image_y))
         
-        # Add yellow front indicator 
-        pygame.draw.circle(self.original_image, (255, 255, 0), (width//2, 10), 5)
+        # Draw hitbox outline (full size of the surface)
+        pygame.draw.rect(self.original_image, color, (0, 0, CAR_LENGTH, CAR_WIDTH), 2)
+        
+        # Add yellow dot to indicate front (center top)
+        pygame.draw.circle(self.original_image, (255, 255, 0), (CAR_LENGTH//2, 10), 5)
         
         # Position and movement variables
         self.pos = pygame.math.Vector2(WIDTH // 2, HEIGHT // 2)
