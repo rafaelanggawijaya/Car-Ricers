@@ -1,8 +1,7 @@
-"""06 Menu v3
-Description: The menu of the game. Has the instructions
-and is where you go to to start up can view high score
-and option for settings (if that ever happens)
-Update: polished up the menu and added game icon
+"""Final Car ricers Version
+Description: A Car racing game where your objective is to get pass as 
+any cars before you crash. Please note to download all images for the
+program to work
 By Rafael Anggawijaya"""
 
 
@@ -18,7 +17,8 @@ pygame.init()
 WIDTH, HEIGHT = 1200, 700
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Car Ricers")
-
+icon = pygame.image.load("game_icon.png")
+pygame.display.set_icon(icon)
 # Frame rate
 clock = pygame.time.Clock()
 
@@ -76,12 +76,6 @@ class Player:
         
         # Draw car
         self.original_image.blit(self.player_image, (0, 0))
-        
-        # Hitbox
-        pygame.draw.rect(self.original_image, color, (0, 0, width, height), 2)
-        
-        # Add yellow front indicator 
-        pygame.draw.circle(self.original_image, (255, 255, 0), (width//2, 10), 5)
         
         self.pos = pygame.math.Vector2(WIDTH // 2, HEIGHT // 2)
         self.velocity = pygame.math.Vector2()
@@ -306,7 +300,6 @@ class AiCar:
         
         return False  # No scoring this frame
     def draw(self, screen):
-        pygame.draw.rect(screen, self.colour, (self.x, self.y, self.width, self.length), 4)
         screen.blit(self.image, (self.x, self.y))
         
 
@@ -419,7 +412,16 @@ def draw_score(screen):
     
 # end screen
 def show_end_screen():
-    screen.fill(BLACK)
+    # Load backgorund
+    end_screen = pygame.image.load("end_screen.png").convert_alpha()
+    end_screen = pygame.transform.scale(end_screen, (WIDTH, HEIGHT))
+
+    screen.blit(end_screen, (0, 0))
+
+    # Create a semi-transparent overlay for better text readability
+    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 128))  # Black with 50% opacity
+    screen.blit(overlay, (0, 0))
     
     # Game over text
     game_over_text = FONT.render("GAME OVER", True, WHITE)
