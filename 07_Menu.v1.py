@@ -1,11 +1,10 @@
-"""05 Game_loop v2
-Description: This is the game ove screen which happens 
-when either the player hits another car or brakes for 
-too long. It allows the user to play agian or quit or 
-go to menu which will be made later
-Update: connected to the rest of the game made the 
-restart and quit keys work
+"""06 Menu v1
+Description: The menu of the game. Has the instructions
+and is where you go to to start up can view high score
+and option for settings (if that ever happens)
+Update: made the back bone for the menu
 By Rafael Anggawijaya"""
+
 
 import pygame
 import sys
@@ -51,6 +50,19 @@ SMALL_FONT = pygame.font.SysFont('Arial', 30)
 score = 0
 score_increment_cooldown = 0  
 SCORE_COOLDOWN = 30
+# menu constants
+MENU_FONT_SIZE = 48
+MENU_ITEM_PADDING = 20
+MENU_COLOR = (255, 255, 255)
+MENU_HOVER_COLOR = (255, 200, 0)
+MENU_TITLE_COLOR = (255, 0, 0)
+MENU_TITLE_SIZE = 64
+
+MENU = 0
+GAME_ACTIVE = 1
+GAME_OVER = 2
+HIGH_SCORES = 3
+current_state = MENU
 
 class Player:
     def __init__(self, width, height, color):
@@ -88,9 +100,6 @@ class Player:
         self.rect = self.image.get_rect(center=self.pos)
 
     def movement(self, user_input):
-        # holds current co-ordinates for collison detection
-        prev_pos = self.pos.copy()
-        prev_velocity = self.velocity.copy()
         # Acceleration foward
         if user_input[pygame.K_UP] or user_input[pygame.K_w]:
             self.brake_hold_time = False
@@ -403,8 +412,7 @@ class Background:
 
 # in game score
 def draw_score(screen):
-    score_text = SMALL_FONT.render(f"Cars Passed: {score}", True, WHITE)
-    # Draw with a slight black background for better visibility
+    score_text = SMALL_FONT.render(f"Score: {score}", True, WHITE)
     pygame.draw.rect(screen, GRASS_COLOUR, (10, 10, score_text.get_width() + 20, score_text.get_height() + 10))
     screen.blit(score_text, (20, 15))
     
@@ -415,6 +423,14 @@ def show_end_screen():
     # Game over text
     game_over_text = FONT.render("GAME OVER", True, WHITE)
     screen.blit(game_over_text, (WIDTH//2 - game_over_text.get_width()//2, HEIGHT//2 - 100))
+
+    # High_score
+    high_score_text = SMALL_FONT.render(f"High Score: {high_score}", True, WHITE)
+    screen.blit(high_score_text, (WIDTH//2 - high_score_text.get_width()//2, HEIGHT//2))
+
+    # score
+    score_text = SMALL_FONT.render(f"Your Score: {score}", True, WHITE)
+    screen.blit(score_text, (WIDTH//2 - score_text.get_width()//2, HEIGHT//2 + 50))
     
     # Restart instruction
     restart_text = SMALL_FONT.render("Press SPACE to restart", True, WHITE)
@@ -426,6 +442,107 @@ def show_end_screen():
     
     pygame.display.update()
 
+# loading previous high score
+def load_high_score():
+    try:
+        hi_score_file = open("Hi_score.txt", "r")
+    except IOError:
+        hi_score_file = open("Hi_score.txt", 'w')
+        hi_score_file.write("0")
+    hi_score_file = open("Hi_score.txt", "r")
+    value = hi_score_file.read()
+    hi_score_file.close()
+    return value
+
+# updating the high score
+def update_high_score(score, high_score):
+    if int(score) > int(high_score):
+        return score
+    else:
+        return high_score
+
+# saving high scores
+def save_high_score(high_score):
+    high_score_file = open("Hi_score.txt", 'w')
+    high_score_file.write(str(high_score))
+    high_score_file.close()
+
+
+# Menu items
+menu_items = [
+    {"text": "Start Game", "action": GAME_ACTIVE},
+    {"text": "High Scores", "action": HIGH_SCORES},
+    {"text": "Quit", "action": "quit"}
+]
+
+# menu 
+def draw_menu():
+    screen.fill((0, 0, 0))  # Clear screen with black
+    
+    # Draw title
+    title_font = pygame.font.SysFont(None, MENU_TITLE_SIZE)
+    title_text = title_font.render("Car Ricers", True, MENU_TITLE_COLOR)
+    title_rect = title_text.get_rect(center=(WIDTH//2, HEIGHT//4))
+    screen.blit(title_text, title_rect)
+    
+    # Draw menu items
+    font = pygame.font.SysFont(None, MENU_FONT_SIZE)
+    mouse_pos = pygame.mouse.get_pos()
+    
+    for i, item in enumerate(menu_items):
+        # Check if mouse is hovering over this item
+        text = font.render(item["text"], True, MENU_HOVER_COLOR if 
+                         (WIDTH//2 - 100 <= mouse_pos[0] <= WIDTH//2 + 100 and
+                          HEIGHT//2 + i*(MENU_FONT_SIZE + MENU_ITEM_PADDING) <= mouse_pos[1] <= 
+                          HEIGHT//2 + i*(MENU_FONT_SIZE + MENU_ITEM_PADDING) + MENU_FONT_SIZE)
+                         else MENU_COLOR)
+        
+        text_rect = text.get_rect(center=(WIDTH//2, HEIGHT//2 + i*(MENU_FONT_SIZE + MENU_ITEM_PADDING)))
+        screen.blit(text, text_rect)
+
+def draw_high_scores():
+    screen.fill((0, 0, 0))
+    
+    # Draw title
+    title_font = pygame.font.SysFont(None, MENU_TITLE_SIZE)
+    title_text = title_font.render("HIGH SCORES", True, MENU_TITLE_COLOR)
+    title_rect = title_text.get_rect(center=(WIDTH//2, HEIGHT//4))
+    screen.blit(title_text, title_rect)
+    
+    # Draw high score
+    font = pygame.font.SysFont(None, MENU_FONT_SIZE)
+    score_text = font.render(f"Best: {high_score}", True, MENU_COLOR)
+    score_rect = score_text.get_rect(center=(WIDTH//2, HEIGHT//2))
+    screen.blit(score_text, score_rect)
+    
+    # Draw back instruction
+    back_font = pygame.font.SysFont(None, MENU_FONT_SIZE - 10)
+    back_text = back_font.render("Press ESC to return to menu", True, MENU_COLOR)
+    back_rect = back_text.get_rect(center=(WIDTH//2, HEIGHT - 50))
+    screen.blit(back_text, back_rect)
+
+def handle_menu_click(pos):
+    global current_state, GAME_ACTIVE, score, background, player, ai_cars, high_score
+    
+    for i, item in enumerate(menu_items):
+        if (WIDTH//2 - 100 <= pos[0] <= WIDTH//2 + 100 and
+            HEIGHT//2 + i*(MENU_FONT_SIZE + MENU_ITEM_PADDING) <= pos[1] <= 
+            HEIGHT//2 + i*(MENU_FONT_SIZE + MENU_ITEM_PADDING) + MENU_FONT_SIZE):
+            
+            if item["action"] == "quit":
+                save_high_score(high_score)
+                pygame.quit()
+                sys.exit()
+            else:
+                current_state = item["action"]
+                
+                # Reset game if starting new game
+                if current_state == GAME_ACTIVE:
+                    score = 0
+                    background = Background()
+                    player = Player(CAR_WIDTH, CAR_LENGTH, PLAYER_COLOUR)
+                    ai_cars = [AiCar(i) for i in range(4)]
+
 # Create game objects
 background = Background()
 player = Player(CAR_WIDTH, CAR_LENGTH, PLAYER_COLOUR)
@@ -433,25 +550,42 @@ ai_cars = [AiCar(i) for i in range(4)]  # One car per lane
 
 
 # Main game loop
+high_score = load_high_score()
+# main game loop
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
+            save_high_score(high_score)
             pygame.quit()
             sys.exit()
-        # when user wants to restart
-        if not GAME_ACTIVE and event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-            GAME_ACTIVE = True
-            score = 0  # Reset score when restarting
-            # Reset game state
-            background = Background()
-            player = Player(CAR_WIDTH, CAR_LENGTH, PLAYER_COLOUR)
-            ai_cars = [AiCar(i) for i in range(4)]
-        # when user wants to quit
-        if not GAME_ACTIVE and event.type == pygame.KEYDOWN and event.key == pygame.K_q:
-            pygame.quit()
-            sys.exit()
-        
-    if GAME_ACTIVE:
+            
+        # Handle mouse clicks for menu
+        if current_state == MENU and event.type == pygame.MOUSEBUTTONDOWN:
+            handle_menu_click(event.pos)
+            
+        # Handle keyboard for game over and high scores
+        if current_state == GAME_OVER and event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                current_state = GAME_ACTIVE
+                # Reset game
+                score = 0
+                background = Background()
+                player = Player(CAR_WIDTH, CAR_LENGTH, PLAYER_COLOUR)
+                ai_cars = [AiCar(i) for i in range(4)]
+            elif event.key == pygame.K_q:
+                current_state = MENU
+                
+        if current_state == HIGH_SCORES and event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                current_state = MENU
+    
+    # State management
+    if current_state == MENU:
+        draw_menu()
+    elif current_state == HIGH_SCORES:
+        draw_high_scores()
+    elif current_state == GAME_ACTIVE:
+        # Your existing game active code here
         keys = pygame.key.get_pressed()
         
         # Update systems
@@ -481,7 +615,7 @@ while True:
             car.rect.y = car.y
             car.rect.x = car.x
             
-            # Check if player passed this AI car (player bottom above AI top)
+            # Check if player passed this AI car
             if not car.passed and player_bottom < car.rect.top:
                 car.passed = True
                 if score_increment_cooldown == 0:
@@ -491,11 +625,13 @@ while True:
             # Reset car when it goes off screen
             if car.y > HEIGHT:
                 car.reset_car()
-                car.passed = False  # Reset the passed flag when car respawns
+                car.passed = False
             
             # Check collision between player and this AI car
             if player.rect.colliderect(car.rect):
-                GAME_ACTIVE = False
+                current_state = GAME_OVER
+                high_score = update_high_score(score, high_score)
+                save_high_score(high_score)
         
         # Draw everything
         background.draw(screen)
@@ -503,8 +639,9 @@ while True:
             car.draw(screen)
         player.draw(screen)
         draw_score(screen)
-    else:
-        show_end_screen()
+        
+    elif current_state == GAME_OVER:
+        show_end_screen()  # Modify this to show game over screen with options
         
     pygame.display.update()
     clock.tick(60)

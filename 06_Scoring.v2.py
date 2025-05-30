@@ -1,11 +1,9 @@
-"""05 Game_loop v2
-Description: This is the game ove screen which happens 
-when either the player hits another car or brakes for 
-too long. It allows the user to play agian or quit or 
-go to menu which will be made later
-Update: connected to the rest of the game made the 
-restart and quit keys work
+"""05 Scoring v2
+Description: Scoring system, keeps track of how many 
+cars passed and is able to load up highscores
+Update: added loader and set a high score
 By Rafael Anggawijaya"""
+
 
 import pygame
 import sys
@@ -88,9 +86,6 @@ class Player:
         self.rect = self.image.get_rect(center=self.pos)
 
     def movement(self, user_input):
-        # holds current co-ordinates for collison detection
-        prev_pos = self.pos.copy()
-        prev_velocity = self.velocity.copy()
         # Acceleration foward
         if user_input[pygame.K_UP] or user_input[pygame.K_w]:
             self.brake_hold_time = False
@@ -403,8 +398,7 @@ class Background:
 
 # in game score
 def draw_score(screen):
-    score_text = SMALL_FONT.render(f"Cars Passed: {score}", True, WHITE)
-    # Draw with a slight black background for better visibility
+    score_text = SMALL_FONT.render(f"Score: {score}", True, WHITE)
     pygame.draw.rect(screen, GRASS_COLOUR, (10, 10, score_text.get_width() + 20, score_text.get_height() + 10))
     screen.blit(score_text, (20, 15))
     
@@ -415,6 +409,14 @@ def show_end_screen():
     # Game over text
     game_over_text = FONT.render("GAME OVER", True, WHITE)
     screen.blit(game_over_text, (WIDTH//2 - game_over_text.get_width()//2, HEIGHT//2 - 100))
+
+    # High_score
+    high_score_text = SMALL_FONT.render(f"High Score: {high_score}", True, WHITE)
+    screen.blit(high_score_text, (WIDTH//2 - high_score_text.get_width()//2, HEIGHT//2))
+
+    # score
+    score_text = SMALL_FONT.render(f"Your Score: {score}", True, WHITE)
+    screen.blit(score_text, (WIDTH//2 - score_text.get_width()//2, HEIGHT//2 + 50))
     
     # Restart instruction
     restart_text = SMALL_FONT.render("Press SPACE to restart", True, WHITE)
@@ -426,6 +428,31 @@ def show_end_screen():
     
     pygame.display.update()
 
+# loading previous high score
+def load_high_score():
+    try:
+        hi_score_file = open("Hi_score.txt", "r")
+    except IOError:
+        hi_score_file = open("Hi_score.txt", 'w')
+        hi_score_file.write("0")
+    hi_score_file = open("Hi_score.txt", "r")
+    value = hi_score_file.read()
+    hi_score_file.close()
+    return value
+
+# updating the high score
+def update_high_score(score, high_score):
+    if int(score) > int(high_score):
+        return score
+    else:
+        return high_score
+
+# saving high scores
+def save_high_score(high_score):
+    high_score_file = open("Hi_score.txt", 'w')
+    high_score_file.write(str(high_score))
+    high_score_file.close()
+
 # Create game objects
 background = Background()
 player = Player(CAR_WIDTH, CAR_LENGTH, PLAYER_COLOUR)
@@ -433,9 +460,13 @@ ai_cars = [AiCar(i) for i in range(4)]  # One car per lane
 
 
 # Main game loop
+high_score = load_high_score()
+
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
+            # Save high score before quitting
+            save_high_score(high_score)
             pygame.quit()
             sys.exit()
         # when user wants to restart
@@ -448,6 +479,8 @@ while True:
             ai_cars = [AiCar(i) for i in range(4)]
         # when user wants to quit
         if not GAME_ACTIVE and event.type == pygame.KEYDOWN and event.key == pygame.K_q:
+            # Save high score before quitting
+            save_high_score(high_score)
             pygame.quit()
             sys.exit()
         
@@ -496,6 +529,9 @@ while True:
             # Check collision between player and this AI car
             if player.rect.colliderect(car.rect):
                 GAME_ACTIVE = False
+                # Update high score when game ends
+                high_score = update_high_score(score, high_score)
+                save_high_score(high_score)  # Save the new high score
         
         # Draw everything
         background.draw(screen)
@@ -503,8 +539,9 @@ while True:
             car.draw(screen)
         player.draw(screen)
         draw_score(screen)
+        
     else:
-        show_end_screen()
+        show_end_screen()  
         
     pygame.display.update()
     clock.tick(60)
