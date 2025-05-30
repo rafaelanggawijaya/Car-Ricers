@@ -1,4 +1,4 @@
-"""04 Ai_cars v1
+"""04 Ai_cars v2
 Description: this is the 'obstacles' the playerwill hve to avoid
 Updates: added player car for testing and changed ai
 By Rafael Anggawijaya 
