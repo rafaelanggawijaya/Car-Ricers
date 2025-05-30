@@ -1,10 +1,7 @@
-"""05 Game_loop v2
-Description: This is the game ove screen which happens 
-when either the player hits another car or brakes for 
-too long. It allows the user to play agian or quit or 
-go to menu which will be made later
-Update: connected to the rest of the game made the 
-restart and quit keys work
+"""05 Scoring v1
+Description: Scoring system, keeps track of how many 
+cars passed and is able to load up highscores
+Update: added the score tracker in game
 By Rafael Anggawijaya"""
 
 import pygame

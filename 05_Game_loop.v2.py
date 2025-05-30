@@ -1,9 +1,10 @@
-"""05 Game_loop v1
+"""05 Game_loop v2
 Description: This is the game ove screen which happens 
 when either the player hits another car or brakes for 
 too long. It allows the user to play agian or quit or 
 go to menu which will be made later
-Update: Made the game over screen
+Update: connected to the rest of the game made the 
+restart and quit keys work
 By Rafael Anggawijaya"""
 
 import pygame
@@ -46,7 +47,6 @@ BRAKE_STRENGTH = 0.1
 GAME_ACTIVE = True
 FONT = pygame.font.SysFont('Arial', 50)
 SMALL_FONT = pygame.font.SysFont('Arial', 30)
-
 class Player:
     def __init__(self, width, height, color):
         # Create surface with original dimensions (width=50, height=80)
@@ -244,6 +244,7 @@ class AiCar:
         self.y = 0
         self.rect = pygame.Rect(self.x, self.y, self.width, self.length)
         self.reset_car()
+
         
     def reset_car(self):
         road_center_x = WIDTH // 2
@@ -276,6 +277,8 @@ class AiCar:
         
         self.rect.y = self.y
         self.rect.x = self.x
+
+        return not braking 
     def draw(self, screen):
         pygame.draw.rect(screen, self.colour, (self.x, self.y, self.width, self.length), 4)
         screen.blit(self.image, (self.x, self.y))

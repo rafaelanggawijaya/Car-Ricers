@@ -438,7 +438,7 @@ def show_end_screen():
     screen.blit(restart_text, (WIDTH//2 - restart_text.get_width()//2, HEIGHT//2 + 100))
     
     # quit text
-    quit_text = SMALL_FONT.render("Press Q to Quit", True, WHITE)
+    quit_text = SMALL_FONT.render("Press Q to Quit to Menu", True, WHITE)
     screen.blit(quit_text, (WIDTH//2 - quit_text.get_width()//2, HEIGHT//2 + 250))
     
     pygame.display.update()
