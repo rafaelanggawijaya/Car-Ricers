@@ -43,12 +43,11 @@ CAR_LENGTH = 80
 
 # multi varible use
 BRAKE_STRENGTH = 0.1
-# Add these new variables at the top with other game settings
 GAME_ACTIVE = True
 FONT = pygame.font.SysFont('Arial', 50)
 SMALL_FONT = pygame.font.SysFont('Arial', 30)
 
-# Add this function (place it with your other classes)
+# end screen
 def end_screen():
     screen.fill(BLACK)
     for event in pygame.event.get():
