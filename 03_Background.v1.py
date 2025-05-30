@@ -1,5 +1,7 @@
 """03_Background V1
-Description: making the player, design, controls, hitbox and animations
+Description: This is going to be a road on some open 
+grass with animations which match the ovement of 
+the car (accelrating and deccelerating)
 Updates: Creating a road generator class for background
 By Rafael Anggawijaya 
 """
