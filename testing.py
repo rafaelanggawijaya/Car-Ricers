@@ -1,14 +1,11 @@
-"""03_Background V2
-Description: This is going to be a road on some open 
-grass with animations which match the ovement of 
-the car (accelrating and deccelerating)
-Updates: Boundaries added for car to be kept on the road
+"""Testing
 By Rafael Anggawijaya 
 """
 
 import pygame
 import sys
 import math
+import random
 
 # Initialize pygame
 pygame.init()
@@ -27,6 +24,7 @@ BLACK = (0, 0, 0)
 PLAYER_COLOUR = (40, 18, 150)
 GRASS_COLOUR = (130, 235, 49)
 ROAD_COLOUR = (45, 46, 45)
+AI_CAR_COLORS = [(200, 50, 50), (50, 200, 50), (50, 50, 200), (200, 200, 50)]
 
 # Tile settings for creating background
 TILE_SIZE = 40
@@ -35,6 +33,154 @@ ROAD_WIDTH = 15
 # Car dimensions
 CAR_WIDTH = 50
 CAR_LENGTH = 80  # Longer side will be front/back
+SAFE_DISTANCE = CAR_LENGTH * 1.5  # Minimum distance between cars
+
+class AICar:
+    def __init__(self, y_pos):
+        self.width = CAR_WIDTH
+        self.length = CAR_LENGTH
+        self.color = random.choice(AI_CAR_COLORS)
+        self.speed = random.uniform(5, 15)  # Random speed between 5 and 15
+        self.original_speed = self.speed  # Store original speed for resetting
+        
+        # Calculate road boundaries
+        road_center_x = WIDTH // 2
+        road_half_width = (ROAD_WIDTH * TILE_SIZE) // 2
+        
+        # Determine which lane to spawn in (1 of 4 lanes)
+        self.lane = random.randint(0, 3)
+        lane_width = (ROAD_WIDTH * TILE_SIZE) / 4
+        
+        # Calculate x position based on lane
+        self.x = road_center_x - road_half_width + (self.lane * lane_width) + (lane_width / 2) - (self.width / 2)
+        
+        # Start position (top of screen)
+        self.y = y_pos
+        
+        # Lane change variables
+        self.lane_change_timer = 0
+        self.target_lane = self.lane
+        self.is_changing_lanes = False
+        self.lane_change_speed = 2  # How fast lane changes happen
+        
+        # Collision avoidance
+        self.avoiding_collision = False
+        self.avoidance_timer = 0
+        
+    def get_rect(self):
+        return pygame.Rect(self.x, self.y, self.width, self.length)
+    
+    def check_collision(self, other_car):
+        return self.get_rect().colliderect(other_car.get_rect())
+    
+    def check_proximity(self, other_cars):
+        """Check if any car is too close in front or behind"""
+        for car in other_cars:
+            if car != self:
+                # Check vertical distance (same lane or adjacent lanes)
+                vertical_dist = abs(car.y - self.y)
+                lane_dist = abs(car.lane - self.lane)
+                
+                # If car is in front and close
+                if (car.y < self.y and vertical_dist < SAFE_DISTANCE and lane_dist <= 1):
+                    return True
+        return False
+    
+    def find_safe_lane(self, other_cars):
+        """Find the safest lane to change to (left or right)"""
+        current_lane = self.lane
+        possible_lanes = []
+        
+        # Check if left lane is available
+        if current_lane > 0:
+            left_lane_clear = True
+            for car in other_cars:
+                if car != self and car.lane == current_lane - 1 and abs(car.y - self.y) < SAFE_DISTANCE:
+                    left_lane_clear = False
+                    break
+            if left_lane_clear:
+                possible_lanes.append(current_lane - 1)
+        
+        # Check if right lane is available
+        if current_lane < 3:
+            right_lane_clear = True
+            for car in other_cars:
+                if car != self and car.lane == current_lane + 1 and abs(car.y - self.y) < SAFE_DISTANCE:
+                    right_lane_clear = False
+                    break
+            if right_lane_clear:
+                possible_lanes.append(current_lane + 1)
+        
+        # Return a random safe lane if available
+        if possible_lanes:
+            return random.choice(possible_lanes)
+        return current_lane  # Stay in current lane if no safe options
+    
+    def update(self, background_speed, other_cars):
+        # Check for cars in proximity
+        if self.check_proximity(other_cars):
+            if not self.avoiding_collision:
+                self.avoiding_collision = True
+                self.avoidance_timer = 30  # About 0.5 seconds at 60 FPS
+                
+                # Slow down slightly when avoiding
+                self.speed = max(self.original_speed * 0.8, 5)
+                
+                # Try to find a safer lane
+                self.target_lane = self.find_safe_lane(other_cars)
+                if self.target_lane != self.lane:
+                    self.is_changing_lanes = True
+        else:
+            if self.avoiding_collision:
+                self.avoidance_timer -= 1
+                if self.avoidance_timer <= 0:
+                    self.avoiding_collision = False
+                    self.speed = self.original_speed
+        
+        # Move car downward (relative to background scroll)
+        self.y += self.speed + background_speed
+        
+        # Random lane changing logic (only when not avoiding)
+        if not self.avoiding_collision:
+            self.lane_change_timer -= 1
+            if self.lane_change_timer <= 0 and not self.is_changing_lanes:
+                if random.random() < 0.01:  # 1% chance per frame to consider lane change
+                    if random.random() < 0.5 and self.lane > 0:  # Try to move left
+                        self.target_lane = self.lane - 1
+                        self.is_changing_lanes = True
+                    elif self.lane < 3:  # Try to move right
+                        self.target_lane = self.lane + 1
+                        self.is_changing_lanes = True
+                    self.lane_change_timer = random.randint(60, 180)  # 1-3 seconds before next attempt
+        
+        # Handle lane changing
+        if self.is_changing_lanes:
+            road_center_x = WIDTH // 2
+            road_half_width = (ROAD_WIDTH * TILE_SIZE) // 2
+            lane_width = (ROAD_WIDTH * TILE_SIZE) / 4
+            
+            target_x = road_center_x - road_half_width + (self.target_lane * lane_width) + (lane_width / 2) - (self.width / 2)
+            
+            # Move toward target lane
+            if abs(self.x - target_x) < 1:  # Reached target
+                self.x = target_x
+                self.lane = self.target_lane
+                self.is_changing_lanes = False
+            else:
+                self.x += (target_x - self.x) * 0.05  # Smooth interpolation
+        
+        # Wrap around when off screen
+        if self.y > HEIGHT + self.length:
+            self.y = -self.length
+            self.lane = random.randint(0, 3)  # Random new lane when respawning
+            self.speed = random.uniform(5, 15)  # Random new speed
+            self.original_speed = self.speed
+    
+    def draw(self, screen):
+        pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.length))
+        # Add some details to make it look more like a car
+        pygame.draw.rect(screen, BLACK, (self.x + 5, self.y + 5, self.width - 10, 10))  # Windshield
+        pygame.draw.rect(screen, BLACK, (self.x + 5, self.y + self.length - 15, self.width - 10, 10))  # Rear window
 
 class Background:
     def __init__(self):
@@ -45,16 +191,10 @@ class Background:
         # animations variables
         self.scroll_y = 0
         self.speed = 0
-        self.max_speed = 50
+        self.max_speed = 30
         self.acceleration = 0.1
         self.deceleration = 0.2
         self.brake_strength = 0.3
-        
-        # Road parameters - properly sized for 4 lanes
-        self.lane_count = 4
-        self.lane_width = TILE_SIZE * 2  # Wider lanes (2 tiles per lane)
-        self.total_road_width = self.lane_count * self.lane_width
-        self.road_offset = 0  # Center the road
         
         # Generate road pattern
         self.road_map = self.generate_road_map()
@@ -65,35 +205,32 @@ class Background:
         columns = math.ceil(self.width / TILE_SIZE)
         background = [[0 for _ in range(columns)] for _ in range(rows)]
 
-        # Calculate road boundaries in tile units
-        road_left = (columns // 2) - (self.total_road_width // (2 * TILE_SIZE)) + self.road_offset
-        road_right = road_left + (self.total_road_width // TILE_SIZE)
-        
-        # Mark road tiles
+        # Vertical road in center
+        center_x = columns // 2
         for y in range(rows):
-            for x in range(int(road_left), int(road_right)):
-                if 0 <= x < columns:
-                    background[y][x] = 1  # Mark as road
+            for dx in range(-ROAD_WIDTH//2, ROAD_WIDTH//2 + 1):
+                if 0 <= center_x + dx < columns:
+                    background[y][center_x + dx] = 1
             
         return background
         
     def draw_background(self):
-        # Fill background with proper grass color
-        self.background.fill(GRASS_COLOUR)  # Make sure GRASS_COLOR is defined correctly
-        
-        # Draw road area
-        road_left = (self.width // 2) - (self.total_road_width // 2)
-        pygame.draw.rect(
-            self.background, 
-            ROAD_COLOUR,
-            (road_left, 0, self.total_road_width, self.height)
-        )
-        
+        # Fill background with grass
+        self.background.fill(GRASS_COLOUR)
+        # Draw roads
+        for y in range(len(self.road_map)):
+            for x in range(len(self.road_map[0])):
+                if self.road_map[y][x] == 1:
+                    pygame.draw.rect(
+                        self.background, 
+                        ROAD_COLOUR, 
+                        (x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                    )
         # Draw road markings
         self.draw_road_markings()
     
     def update(self, keys):
-        # (Keep your existing update logic)
+        # Handle acceleration/deceleration
         if keys[pygame.K_UP] or keys[pygame.K_w]:
             self.speed = min(self.speed + self.acceleration, self.max_speed)
         elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
@@ -101,156 +238,60 @@ class Background:
         else:
             self.speed = max(self.speed - self.deceleration, 0)
         
+        # Update scroll position
         self.scroll_y += self.speed
         self.scroll_y %= (TILE_SIZE * 4)
+        
+        # Redraw background with new scroll position
         self.draw_background()
     
     def draw_road_markings(self):
         road_center_x = self.width // 2
-        half_road_width = self.total_road_width // 2
+        road_half_width = (ROAD_WIDTH * TILE_SIZE) // 2
         
-        # Edge lines (solid white on both sides)
-        edge_line_width = 4
-        pygame.draw.rect(
-            self.background,
-            WHITE,
-            (road_center_x - half_road_width, 0, edge_line_width, self.height)
-        )
-        pygame.draw.rect(
-            self.background,
-            WHITE,
-            (road_center_x + half_road_width - edge_line_width, 0, edge_line_width, self.height)
-        )
+        # Edge line properties (keep existing)
+        line_width = 4
+        line_length = TILE_SIZE * 2
+        line_gap = TILE_SIZE * 2
         
-        # Lane dividers (dashed lines between lanes)
-        dash_length = TILE_SIZE * 2
-        dash_gap = TILE_SIZE * 2
-        divider_width = 2
-        
-        for lane in range(1, self.lane_count):
-            lane_x = road_center_x - half_road_width + (lane * self.lane_width)
-            
-            # Draw dashed line for this lane divider
-            for y in range(-int(self.scroll_y), self.height, dash_length + dash_gap):
+        # Draw center dashed lines (modified for 4 lanes)
+        # First calculate lane positions
+        lane_width = ROAD_WIDTH * TILE_SIZE / 4  # Split road into 4 lanes
+        for lane_divider in [-1, 0, 1]:  # Now drawing 3 dividers for 4 lanes
+            line_x = road_center_x + (lane_divider * lane_width)
+            for y in range(-int(self.scroll_y), self.height, line_length + line_gap):
                 pygame.draw.rect(
                     self.background,
                     WHITE,
-                    (lane_x - divider_width//2, y, divider_width, dash_length)
+                    (line_x - line_width//2,
+                    y,
+                    line_width,
+                    line_length)
                 )
-                    
+        
+        # Keep existing continuous edge lines (no changes)
+        pygame.draw.rect(
+            self.background,
+            WHITE,
+            (road_center_x - road_half_width, 0, line_width, self.height)
+        )
+        pygame.draw.rect(
+            self.background,
+            WHITE,
+            (road_center_x + road_half_width - line_width, 0, line_width, self.height)
+        )
+    
     def draw(self, screen):
         screen.blit(self.background, (0, 0))
-class Player:
-    def __init__(self, width, height, color):
-        # Create surface with original dimensions (width=50, height=80)
-        self.original_image = pygame.Surface((width, height), pygame.SRCALPHA)
-        
-        # Load and scale the car
-        self.player_image = pygame.image.load("player_car.png").convert_alpha()
-        self.player_image = pygame.transform.scale(self.player_image, (width, height))
-        
-        # Draw car
-        self.original_image.blit(self.player_image, (0, 0))
-        
-        # Hitbox
-        pygame.draw.rect(self.original_image, color, (0, 0, width, height), 2)
-        
-        # Add yellow front indicator 
-        pygame.draw.circle(self.original_image, (255, 255, 0), (width//2, 10), 5)
-        
-        self.pos = pygame.math.Vector2(WIDTH // 2, HEIGHT // 2)
-        self.velocity = pygame.math.Vector2()
-        self.direction = 270  # Pointing up
-        self.rotation_speed = 3
-        self.acceleration = 0.1
-        self.max_speed = 2
-        self.deceleration = 0.4
-        self.brake_strength = 0.1
-        self.brake_hold_time = False
-        self.brake_cooldown = 2000  # 2000ms = 2 seconds
-        self.drift_speed = 1  # downward motion when not movinvg
-        self.max_drift_speed = 2  # Maximum drift speed
-        
-        self.original_image = pygame.transform.rotate(self.original_image, -90)
-        self.image = self.original_image
-        self.rect = self.image.get_rect(center=self.pos)
-
-    def movement(self, user_input):
-        # Acceleration foward
-        if user_input[pygame.K_UP] or user_input[pygame.K_w]:
-            self.brake_hold_time = False
-            rad = math.radians(self.direction)
-            self.velocity.x += math.cos(rad) * self.acceleration
-            self.velocity.y += math.sin(rad) * self.acceleration
-        
-        # Braking
-        if user_input[pygame.K_DOWN] or user_input[pygame.K_s]:
-            if self.velocity.length() > 0 and self.brake_hold_time == False:
-                brake_dir = self.velocity.normalize()
-                self.velocity.x -= brake_dir.x * self.brake_strength
-                self.velocity.y -= brake_dir.y * self.brake_strength
-                # cheecks if velocity hits zero
-                if (brake_dir.x > 0 and self.velocity.x < 0) or (brake_dir.x < 0 and self.velocity.x > 0) or \
-                (brake_dir.y > 0 and self.velocity.y < 0) or (brake_dir.y < 0 and self.velocity.y > 0):
-                    self.velocity.x = 0
-                    self.velocity.y = 0
-                    pygame.time.delay(2000)
-                    self.brake_hold_time = True
-                
-            
-        
-        
-        # Check if no movement keys are pressed
-        no_movement_keys = not (user_input[pygame.K_UP] or user_input[pygame.K_w] or 
-                            user_input[pygame.K_DOWN] or user_input[pygame.K_s])
-        
-        # Natural deceleration when no keys pressed
-        if no_movement_keys or self.brake_hold_time:
-            if self.velocity.length() > self.deceleration:
-                decel_dir = self.velocity.normalize()
-                self.velocity.x -= decel_dir.x * self.deceleration
-                self.velocity.y -= decel_dir.y * self.deceleration
-            else:
-                self.velocity = pygame.math.Vector2()
-            
-            # Apply downward drift when completely stopped
-            if self.velocity.length() == 0:
-                self.velocity.y = min(self.velocity.y + self.drift_speed, self.max_drift_speed)
-        
-        # Speed limit
-        if self.velocity.length() > self.max_speed:
-            self.velocity = self.velocity.normalize() * self.max_speed
-        
-        # Steering
-        turn_speed = self.rotation_speed * (0.2 + 0.8 * (self.velocity.length() / self.max_speed))
-        
-        if user_input[pygame.K_LEFT] or user_input[pygame.K_a]:
-            self.direction -= turn_speed
-        if user_input[pygame.K_RIGHT] or user_input[pygame.K_d]:
-            self.direction += turn_speed
-        
-        self.direction %= 360
-        self.pos += self.velocity
-        self.image = pygame.transform.rotate(self.original_image, -self.direction)
-        self.rect = self.image.get_rect(center=self.pos)
-    
-    def keep_on_screen(self):
-        car_rect = self.image.get_rect(center=self.pos)
-        if car_rect.left < 0:
-            self.pos.x -= car_rect.left
-        if car_rect.right > WIDTH:
-            self.pos.x -= (car_rect.right - WIDTH)
-        if car_rect.top < 0:
-            self.pos.y -= car_rect.top
-        if car_rect.bottom > HEIGHT:
-            self.pos.y -= (car_rect.bottom - HEIGHT)
-
-    def draw(self, screen):
-        screen.blit(self.image, self.rect)
 
 # Create game objects
-player = Player(CAR_WIDTH, CAR_LENGTH, PLAYER_COLOUR)
 background = Background()
+
+# Create AI cars
+ai_cars = []
+for i in range(8):  # Create 8 AI cars
+    # Space them out vertically
+    ai_cars.append(AICar(random.randint(-HEIGHT, 0)))
 
 # Main game loop
 while True:
@@ -263,12 +304,17 @@ while True:
     
     # Update systems
     background.update(keys)
-    player.movement(keys)
-    player.keep_on_screen()
+    
+    # Update AI cars (passing the list of all cars for collision detection)
+    for car in ai_cars:
+        car.update(background.speed, ai_cars)
     
     # Draw everything
     background.draw(screen)
-    player.draw(screen)
-
+    
+    # Draw AI cars
+    for car in ai_cars:
+        car.draw(screen)
+    
     pygame.display.update()
     clock.tick(60)

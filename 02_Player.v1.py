@@ -1,6 +1,6 @@
 """02_Player V1
-Description: aking the player, design and controls
-Updates:
+Description: making the player, design, controls, hitbox and animations
+Updates:Added a box to represent the car (will be used of hitbox later)
 By Rafael Anggawijaya 
 """
 import pygame
