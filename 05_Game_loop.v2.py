@@ -1,8 +1,10 @@
-"""04 Ai_cars v1
-Description: this is the 'obstacles' the playerwill hve to avoid
-Updates: added ai designs and continued to change ai
-By Rafael Anggawijaya 
-"""
+"""05 Game_loop v1
+Description: This is the game ove screen which happens 
+when either the player hits another car or brakes for 
+too long. It allows the user to play agian or quit or 
+go to menu which will be made later
+Update: Made the game over screen
+By Rafael Anggawijaya"""
 
 import pygame
 import sys
@@ -41,6 +43,10 @@ CAR_LENGTH = 80
 
 # multi varible use
 BRAKE_STRENGTH = 0.1
+GAME_ACTIVE = True
+FONT = pygame.font.SysFont('Arial', 50)
+SMALL_FONT = pygame.font.SysFont('Arial', 30)
+
 class Player:
     def __init__(self, width, height, color):
         # Create surface with original dimensions (width=50, height=80)
@@ -376,6 +382,24 @@ class Background:
     def draw(self, screen):
         screen.blit(self.background, (0, 0))
 
+# end screen
+def show_end_screen():
+    screen.fill(BLACK)
+    
+    # Game over text
+    game_over_text = FONT.render("GAME OVER", True, WHITE)
+    screen.blit(game_over_text, (WIDTH//2 - game_over_text.get_width()//2, HEIGHT//2 - 100))
+    
+    # Restart instruction
+    restart_text = SMALL_FONT.render("Press SPACE to restart", True, WHITE)
+    screen.blit(restart_text, (WIDTH//2 - restart_text.get_width()//2, HEIGHT//2 + 100))
+    
+    # quit text
+    quit_text = SMALL_FONT.render("Press Q to Quit", True, WHITE)
+    screen.blit(quit_text, (WIDTH//2 - quit_text.get_width()//2, HEIGHT//2 + 250))
+    
+    pygame.display.update()
+
 # Create game objects
 background = Background()
 player = Player(CAR_WIDTH, CAR_LENGTH, PLAYER_COLOUR)
@@ -387,42 +411,46 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-    
-    keys = pygame.key.get_pressed()
-    
-    # Update systems
-    background.update(keys)
-    player.movement(keys)
-    player.keep_on_screen()
-
-     # Update AI cars and check for collisions
-    for car in ai_cars:
-        car.update(background.speed, keys)
+        # when user wants to restart
+        if not GAME_ACTIVE and event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+            GAME_ACTIVE = True
+            # Reset game state
+            background = Background()
+            player = Player(CAR_WIDTH, CAR_LENGTH, PLAYER_COLOUR)
+            ai_cars = [AiCar(i) for i in range(4)]
+        # when user wants to quit
+        if not GAME_ACTIVE and event.type == pygame.KEYDOWN and event.key == pygame.K_q:
+            pygame.quit()
+            sys.exit()
         
-        # Check collision between player and this AI car
-        if player.rect.colliderect(car.rect):
-            print("Collision detected!")
-            # Handle collision (e.g., reduce speed, play sound, etc.)
-            player.velocity *= 0.5  # Slow down player on collision
+    if GAME_ACTIVE:
+        keys = pygame.key.get_pressed()
+        
+        # Update systems
+        background.update(keys)
+        player.movement(keys)
+        player.keep_on_screen()
+
+        # Update AI cars and check for collisions
+        for car in ai_cars:
+            car.update(background.speed, keys)
             
-            # Optional: Push player away from collision
-            if player.rect.centerx < car.rect.centerx:
-                player.pos.x -= 10
-            else:
-                player.pos.x += 10
-                
-            # Update player rect after position change
-            player.rect = player.image.get_rect(center=player.pos)
-    
-    # Update AI cars
-    for car in ai_cars:
-        car.update(background.speed, keys)
-    
-    # Draw everything
-    background.draw(screen)
-    player.draw(screen)
-    for car in ai_cars:
-        car.draw(screen)
-    
+            # Check collision between player and this AI car
+            if player.rect.colliderect(car.rect):
+                #ends round
+                GAME_ACTIVE = False
+        
+        # Update AI cars
+        for car in ai_cars:
+            car.update(background.speed, keys)
+        
+        # Draw everything
+        background.draw(screen)
+        player.draw(screen)
+        for car in ai_cars:
+            car.draw(screen)
+    else:
+        show_end_screen()
+        
     pygame.display.update()
     clock.tick(60)
