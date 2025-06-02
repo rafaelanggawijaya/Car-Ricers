@@ -94,6 +94,7 @@ class Player:
         self.original_image = pygame.transform.rotate(self.original_image, -90)
         self.image = self.original_image
         self.rect = self.image.get_rect(center=self.pos)
+        self.is_moving_backward = False  # Add this line
 
     def movement(self, user_input):
         # Acceleration foward
@@ -186,6 +187,10 @@ class Player:
             self.image = pygame.transform.rotate(self.original_image,
                                                  -self.direction)
             self.rect = self.image.get_rect(center=self.pos)
+
+        rad = math.radians(self.direction)
+        forward_vector = pygame.math.Vector2(math.cos(rad), math.sin(rad))
+        self.is_moving_backward = self.velocity.dot(forward_vector) < 0
     
     def keep_on_screen(self):
         car_rect = self.image.get_rect(center=self.pos)
@@ -281,34 +286,36 @@ class AiCar:
         max_x = lane_center + (LANE_WIDTH // 2) - (self.width // 2)
         self.x = random.uniform(min_x, max_x)
         
-        # Start above screen with random delay
-        self.y = random.randint(-HEIGHT * 2, -CAR_LENGTH)
+        # Start above screen
+        self.y = random.randint(-HEIGHT * 2, -self.length)
         
         # random speed each respawn
         self.speed = random.uniform(1.5, 6.5)
+        self.passed = False  # Reset passed status
             
+
     def update(self, scroll_speed, braking_):
-        
-        # Handle movement
-        if braking_:
-            # When player brakes, AI cars move up (backward)
-            self.y -= self.speed
-        else:
-            # Normal movement - move down with additional scroll speed
+        # Only move if there's actual scroll speed (player is moving forward)
+        if scroll_speed > 0:
             self.y += self.speed + scroll_speed * 0.1
+            # When car exits screen bottom during normal movement, reset it
+            if self.y > HEIGHT:
+                self.reset_car()
+                self.passed = False
+        # Handle braking/reverse case
+        elif braking_ or player.is_moving_backward:
+            self.y -= self.speed
+            if self.y < -self.length:
+                self.y = -self.length
+                self.passed = False
         
         self.rect.y = self.y
         self.rect.x = self.x
         
-        # Check if car has passed the player (player's bottom is above
-        # AI's top)
-        if not self.passed and player_bottom < self.rect.top:
+        # Check if car has passed the player
+        if not self.passed and player.get_bottom() < self.rect.top:
             self.passed = True
             return True  # Return True to indicate scoring opportunity
-        
-        # When car exits screen, reset it
-        if self.y > HEIGHT:
-            self.reset_car()
         
         return False  # No scoring this frame
     def draw(self, screen_):
@@ -740,17 +747,18 @@ while True:
 
         # Update AI cars and check for collisions
         for car in ai_cars:
-            # Store previous position before updating
-            prev_top = car.rect.top
+            # Update car position - pass the actual background speed
+            scored = car.update(background.speed, braking)
             
-            # Update car position
-            if braking:
-                car.y -= car.speed
-            else:
-                car.y += car.speed + background.speed * 0.1
+            if scored and score_increment_cooldown == 0:
+                score += 1
+                score_increment_cooldown = SCORE_COOLDOWN
             
-            car.rect.y = car.y
-            car.rect.x = car.x
+            # Check collision between player and this AI car
+            if player.rect.colliderect(car.rect):
+                current_state = GAME_OVER
+                high_score = update_high_score(score, high_score)
+                save_high_score(high_score)
             
             # Check if player passed this AI car
             if not car.passed and player_bottom < car.rect.top:
